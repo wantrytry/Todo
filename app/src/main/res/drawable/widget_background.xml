@@ -1,0 +1,4 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#33000000" /> <!-- 半透明黑色 -->
+    <corners android:radius="20dp" /> <!-- 小米14的大圆角适配 -->
+</shape>
