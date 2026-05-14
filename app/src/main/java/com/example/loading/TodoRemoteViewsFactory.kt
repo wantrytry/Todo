@@ -72,7 +72,7 @@ class TodoRemoteViewsFactory(
         } else {
             views.setTextViewText(R.id.todo_checkbox, "○")
             views.setTextColor(R.id.todo_checkbox, Color.parseColor("#FF999999"))
-            views.setInt(R.id.todo_checkbox, "setBackgroundResource", 0)
+            views.setInt(R.id.todo_checkbox, "setBackgroundResource", R.drawable.circle_empty)
 
             views.setTextColor(R.id.todo_text, Color.parseColor("#FF333333"))
         }
