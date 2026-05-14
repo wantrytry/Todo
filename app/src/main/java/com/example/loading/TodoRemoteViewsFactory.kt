@@ -4,6 +4,9 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.StrikethroughSpan
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 
@@ -29,54 +32,71 @@ class TodoRemoteViewsFactory(
     }
 
     private fun loadData() {
-        todos = TodoPrefs.getTodos(context)
-        hideCompleted = TodoPrefs.getHideCompleted(context)
+        todos = TodoPrefs.getTodos(context, appWidgetId)
+        hideCompleted = TodoPrefs.getHideCompleted(context, appWidgetId)
     }
 
     override fun onDestroy() {}
 
     override fun getCount(): Int {
+        val displayTodos = todos.filter { !it.isHistory }
         return if (hideCompleted) {
-            todos.count { !it.isCompleted }
+            displayTodos.count { !it.isCompleted }
         } else {
-            todos.size
+            displayTodos.size
         }
     }
 
     override fun getViewAt(position: Int): RemoteViews {
-        val displayTodos = if (hideCompleted) {
-            todos.filter { !it.isCompleted }
+        val displayTodos = todos.filter { !it.isHistory }
+        val filtered = if (hideCompleted) {
+            displayTodos.filter { !it.isCompleted }
         } else {
-            todos
+            displayTodos.sortedWith(compareBy({ it.isCompleted }, { it.id }))
         }
 
-        val todo = displayTodos[position]
+        val todo = filtered[position]
         val views = RemoteViews(context.packageName, R.layout.todo_item)
 
         views.setTextViewText(R.id.todo_text, todo.text)
 
         if (todo.isCompleted) {
-            views.setTextViewText(R.id.todo_checkbox, "●✓")
-            views.setTextColor(R.id.todo_checkbox, Color.parseColor("#FFFF8C00"))
-            views.setTextColor(R.id.todo_text, Color.parseColor("#FF555555"))
+            views.setTextViewText(R.id.todo_checkbox, "✓")
+            views.setTextColor(R.id.todo_checkbox, Color.argb(255, 255, 255, 255))
+            views.setInt(R.id.todo_checkbox, "setBackgroundResource", R.drawable.circle_filled)
+
+            views.setTextColor(R.id.todo_text, Color.parseColor("#FF888888"))
+            val spannable = SpannableString(todo.text)
+            spannable.setSpan(StrikethroughSpan(), 0, todo.text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            views.setTextViewText(R.id.todo_text, spannable)
         } else {
             views.setTextViewText(R.id.todo_checkbox, "○")
             views.setTextColor(R.id.todo_checkbox, Color.parseColor("#FF999999"))
+            views.setInt(R.id.todo_checkbox, "setBackgroundResource", 0)
+
             views.setTextColor(R.id.todo_text, Color.parseColor("#FF333333"))
         }
 
-        val fillInIntent = Intent().apply {
+        val checkboxIntent = Intent().apply {
             putExtra("todo_id", todo.id)
-            putExtra("action", "toggle")
+            putExtra("click_type", "checkbox")
+            putExtra("widget_id", appWidgetId)
         }
-        views.setOnClickFillInIntent(R.id.todo_item_layout, fillInIntent)
+        views.setOnClickFillInIntent(R.id.todo_checkbox, checkboxIntent)
+
+        val textIntent = Intent().apply {
+            putExtra("todo_id", todo.id)
+            putExtra("click_type", "text")
+            putExtra("widget_id", appWidgetId)
+        }
+        views.setOnClickFillInIntent(R.id.todo_text, textIntent)
 
         return views
     }
 
     override fun getLoadingView(): RemoteViews? = null
 
-    override fun getViewTypeCount(): Int = 1
+    override fun getViewTypeCount(): Int = 2
 
     override fun getItemId(position: Int): Long = position.toLong()
 

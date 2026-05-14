@@ -8,69 +8,109 @@ import com.google.gson.reflect.TypeToken
 object TodoPrefs {
     private const val PREFS_NAME = "TodoPrefs"
     private const val KEY_TODOS = "todos"
-    private const val KEY_TRANSPARENCY = "transparency"
     private const val KEY_HIDE_COMPLETED = "hide_completed"
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    fun getTodos(context: Context): List<TodoItem> {
-        val prefs = getPrefs(context)
+    private fun getWidgetPrefs(context: Context, appWidgetId: Int): SharedPreferences {
+        return context.getSharedPreferences("widget_$appWidgetId", Context.MODE_PRIVATE)
+    }
+
+    fun getTodos(context: Context, appWidgetId: Int = -1): List<TodoItem> {
+        val prefs = if (appWidgetId >= 0) getWidgetPrefs(context, appWidgetId) else getPrefs(context)
         val json = prefs.getString(KEY_TODOS, "[]") ?: "[]"
         val type = object : TypeToken<List<TodoItem>>() {}.type
         return Gson().fromJson(json, type) ?: emptyList()
     }
 
-    fun saveTodos(context: Context, todos: List<TodoItem>) {
-        val prefs = getPrefs(context)
+    fun saveTodos(context: Context, todos: List<TodoItem>, appWidgetId: Int = -1) {
+        val prefs = if (appWidgetId >= 0) getWidgetPrefs(context, appWidgetId) else getPrefs(context)
         val json = Gson().toJson(todos)
         prefs.edit().putString(KEY_TODOS, json).apply()
     }
 
-    fun addTodo(context: Context, text: String) {
-        val todos = getTodos(context).toMutableList()
+    fun addTodo(context: Context, text: String, appWidgetId: Int = -1) {
+        val todos = getTodos(context, appWidgetId).toMutableList()
         val newTodo = TodoItem(
             id = System.currentTimeMillis().toString(),
             text = text,
             isCompleted = false
         )
         todos.add(newTodo)
-        saveTodos(context, todos)
+        saveTodos(context, todos, appWidgetId)
     }
 
-    fun toggleTodo(context: Context, id: String) {
-        val todos = getTodos(context).map { todo ->
+    fun updateTodoText(context: Context, id: String, newText: String, appWidgetId: Int = -1) {
+        val todos = getTodos(context, appWidgetId).map { todo ->
+            if (todo.id == id) {
+                todo.copy(text = newText)
+            } else {
+                todo
+            }
+        }
+        saveTodos(context, todos, appWidgetId)
+    }
+
+    fun toggleTodo(context: Context, id: String, appWidgetId: Int = -1) {
+        val todos = getTodos(context, appWidgetId).map { todo ->
             if (todo.id == id) {
                 todo.copy(isCompleted = !todo.isCompleted)
             } else {
                 todo
             }
         }
-        saveTodos(context, todos)
+        saveTodos(context, todos, appWidgetId)
     }
 
-    fun getTransparency(context: Context): Int {
-        val prefs = getPrefs(context)
-        return prefs.getInt(KEY_TRANSPARENCY, 255)
+    fun moveToHistory(context: Context, id: String, appWidgetId: Int = -1) {
+        val todos = getTodos(context, appWidgetId).map { todo ->
+            if (todo.id == id) {
+                todo.copy(isHistory = true, isCompleted = false)
+            } else {
+                todo
+            }
+        }
+        saveTodos(context, todos, appWidgetId)
     }
 
-    fun setTransparency(context: Context, transparency: Int) {
-        val prefs = getPrefs(context)
-        prefs.edit().putInt(KEY_TRANSPARENCY, transparency).apply()
+    fun restoreFromHistory(context: Context, id: String, appWidgetId: Int = -1) {
+        val todos = getTodos(context, appWidgetId).map { todo ->
+            if (todo.id == id) {
+                todo.copy(isHistory = false)
+            } else {
+                todo
+            }
+        }
+        saveTodos(context, todos, appWidgetId)
     }
 
-    fun getHideCompleted(context: Context): Boolean {
-        val prefs = getPrefs(context)
+    fun getTransparency(context: Context, appWidgetId: Int = -1): Int {
+        val prefs = if (appWidgetId >= 0) getWidgetPrefs(context, appWidgetId) else getPrefs(context)
+        return prefs.getInt("transparency", 255)
+    }
+
+    fun setTransparency(context: Context, transparency: Int, appWidgetId: Int = -1) {
+        val prefs = if (appWidgetId >= 0) getWidgetPrefs(context, appWidgetId) else getPrefs(context)
+        prefs.edit().putInt("transparency", transparency).apply()
+    }
+
+    fun getHideCompleted(context: Context, appWidgetId: Int = -1): Boolean {
+        val prefs = if (appWidgetId >= 0) getWidgetPrefs(context, appWidgetId) else getPrefs(context)
         return prefs.getBoolean(KEY_HIDE_COMPLETED, false)
     }
 
-    fun setHideCompleted(context: Context, hide: Boolean) {
-        val prefs = getPrefs(context)
+    fun setHideCompleted(context: Context, hide: Boolean, appWidgetId: Int = -1) {
+        val prefs = if (appWidgetId >= 0) getWidgetPrefs(context, appWidgetId) else getPrefs(context)
         prefs.edit().putBoolean(KEY_HIDE_COMPLETED, hide).apply()
     }
 
-    fun getPendingCount(context: Context): Int {
-        return getTodos(context).count { !it.isCompleted }
+    fun getPendingCount(context: Context, appWidgetId: Int = -1): Int {
+        return getTodos(context, appWidgetId).count { !it.isCompleted && !it.isHistory }
+    }
+
+    fun deleteWidgetPrefs(context: Context, appWidgetId: Int) {
+        getWidgetPrefs(context, appWidgetId).edit().clear().apply()
     }
 }

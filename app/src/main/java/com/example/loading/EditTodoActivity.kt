@@ -12,13 +12,15 @@ import android.view.WindowManager
 import android.widget.EditText
 import android.widget.TextView
 
-class AddTodoActivity : Activity() {
+class EditTodoActivity : Activity() {
     private var widgetId = -1
+    private var todoId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         widgetId = intent.getIntExtra("widget_id", -1)
+        todoId = intent.getStringExtra("todo_id")
 
         requestWindowFeature(Window.FEATURE_NO_TITLE)
 
@@ -44,6 +46,15 @@ class AddTodoActivity : Activity() {
         val input = findViewById<EditText>(R.id.todo_input)
         val saveButton = findViewById<TextView>(R.id.save_button)
         val cancelButton = findViewById<TextView>(R.id.cancel_button)
+        val title = findViewById<TextView>(R.id.dialog_title)
+        title.text = "编辑待办"
+
+        val todos = TodoPrefs.getTodos(this, widgetId)
+        val todo = todos.find { it.id == todoId }
+        if (todo != null) {
+            input.setText(todo.text)
+            input.setSelection(todo.text.length)
+        }
 
         cancelButton.setOnClickListener {
             finish()
@@ -51,8 +62,8 @@ class AddTodoActivity : Activity() {
 
         saveButton.setOnClickListener {
             val text = input.text.toString().trim()
-            if (text.isNotEmpty()) {
-                TodoPrefs.addTodo(this, text, widgetId)
+            if (text.isNotEmpty() && todoId != null) {
+                TodoPrefs.updateTodoText(this, todoId!!, text, widgetId)
                 updateWidget()
                 finish()
             }

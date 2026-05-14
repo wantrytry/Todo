@@ -3,5 +3,6 @@ package com.example.loading
 data class TodoItem(
     val id: String,
     val text: String,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val isHistory: Boolean = false
 )
