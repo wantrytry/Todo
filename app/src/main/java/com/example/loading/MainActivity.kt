@@ -29,12 +29,16 @@ class MainActivity : Activity() {
             (dm.heightPixels * 0.8).toInt()
         )
         window.setGravity(Gravity.CENTER)
+        window.setBackgroundDrawableResource(R.drawable.dialog_rounded)
 
-        val scrollView = ScrollView(this)
+        val scrollView = ScrollView(this).apply {
+            setBackgroundResource(R.drawable.dialog_rounded)
+            isVerticalScrollBarEnabled = false
+        }
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(32, 28, 32, 28)
-            setBackgroundColor(android.graphics.Color.WHITE)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
 
         val title = TextView(this).apply {
